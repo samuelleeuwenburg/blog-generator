@@ -42,10 +42,11 @@ struct Post {
     slug: String,
     title: String,
     html: String,
+    dir: String,
 }
 
 impl Post {
-    fn new(slug: &str, html: &str) -> Post {
+    fn new(slug: &str, html: &str, dir: &str) -> Post {
         let re = Regex::new("<h1>(.+)</h1>").unwrap();
 
         let title = match re.captures(html) {
@@ -55,10 +56,13 @@ impl Post {
             None => String::from(slug),
         };
 
+        println!("{}", dir);
+
         Post {
             title,
             slug: String::from(slug),
             html: String::from(html),
+            dir: String::from(dir),
         }
     }
 
@@ -94,7 +98,7 @@ fn get_posts(config: &Config) -> std::io::Result<Vec<Post>> {
             let html = markdown_to_html(&markdown, &ComrakOptions::default());
             let slug = dir.file_name().to_str().unwrap().to_owned();
 
-            posts.push(Post::new(&slug, &html));
+            posts.push(Post::new(&slug, &html, &dir.path().to_str().unwrap()));
         }
     }
 
@@ -122,15 +126,29 @@ fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> 
         },
     }
 
-    println!("creating html files..");
-
+    println!("creating posts..");
     for post in posts {
-        let file_name = format!("{}.html", post.slug);
-        let file_path = path.clone().join(&file_name);
+        let folder_path = path.clone().join(&post.slug);
+        fs::create_dir(&folder_path)?;
+
+        let file_path = folder_path.join("index.html");
         let mut file = File::create(file_path)?;
 
+        let paths = fs::read_dir(&post.dir)?;
+
+        for path in paths {
+            let path = path?;
+            let extension = path.path().extension().unwrap().to_owned();
+
+            if extension == "png" || extension == "jpg" {
+                let file_name = path.file_name().to_str().unwrap().to_owned();
+                let new_path = folder_path.clone().join(file_name);
+                fs::copy(path.path(), new_path)?;
+            }
+        }
+
         file.write_all(template.build_page(&config, &post.html, &post.title).as_bytes())?;
-        println!("-> {}", &file_name);
+        println!("-> {}", &post.slug);
     }
 
     println!("creating index..");

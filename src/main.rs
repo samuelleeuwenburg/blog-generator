@@ -4,6 +4,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use regex::Regex;
 use comrak::{markdown_to_html, ComrakOptions};
 use serde::Deserialize;
@@ -62,6 +63,7 @@ impl Template {
     }
 }
 
+#[derive(Debug)]
 struct Post {
     slug: String,
     title: String,
@@ -105,16 +107,18 @@ fn open_file(path: &str) -> std::io::Result<String> {
 
 #[derive(Deserialize, Debug)]
 struct PostMeta {
-    timestamp: Option<usize>
+    timestamp: Option<usize>,
+    tags: Option<Vec<String>>,
 }
 
-fn get_meta_from_json_with_default(json: &str) -> PostMeta {
-    match serde_json::from_str(json) {
-        Ok(post_meta) => post_meta,
-        Err(_) => {
-            PostMeta { timestamp: None }
-        }
-    }
+fn get_meta(path: &str) -> PostMeta {
+    open_file(path)
+        .map_err(|_| "no meta file found")
+        .and_then(|json| serde_json::from_str(&json).map_err(|_| "meta file is invalid"))
+        .unwrap_or_else(|err| {
+            println!("{}, using default one..", err);
+            PostMeta { timestamp: None, tags: None }
+        })
 }
 
 fn get_posts(src_dir: &str) -> std::io::Result<Vec<Post>> {
@@ -137,7 +141,7 @@ fn get_posts(src_dir: &str) -> std::io::Result<Vec<Post>> {
             markdown_path.push("content.md");
 
             let markdown = open_file(markdown_path.to_str().unwrap())?;
-            let meta_json = open_file(meta_path.to_str().unwrap())?;
+            let meta = get_meta(meta_path.to_str().unwrap());
 
             let html = markdown_to_html(&markdown, &options);
             let slug = dir.file_name().to_str().unwrap().to_owned();
@@ -147,7 +151,7 @@ fn get_posts(src_dir: &str) -> std::io::Result<Vec<Post>> {
                     &slug,
                     &html,
                     &dir.path().to_str().unwrap(),
-                    get_meta_from_json_with_default(&meta_json),
+                    meta,
                 )
             );
         }
@@ -178,7 +182,18 @@ fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> 
     }
 
     println!("creating posts..");
+    let mut tags_with_pages: HashMap<String, Vec<&Post>> = HashMap::new();
+
     for post in posts {
+        post.meta.tags.clone().map(|tags| {
+            for tag in tags {
+                match tags_with_pages.get_mut(&tag) {
+                    Some(posts) => posts.push(post),
+                    None => { tags_with_pages.insert(tag, vec![post]); }
+                }
+            }
+        });
+
         let folder_path = path.clone().join(&post.slug);
         fs::create_dir(&folder_path)?;
 
@@ -202,16 +217,48 @@ fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> 
         println!("-> {}", &post.slug);
     }
 
-    println!("creating index..");
+    println!("creating tag folder..");
+    let tag_path = path.clone().join("tags");
+    fs::create_dir(&tag_path)?;
 
+    println!("creating tag pages..");
+    for (tag, p) in &tags_with_pages {
+        let folder_path = tag_path.clone().join(&tag);
+        let file_path = folder_path.clone().join("index.html");
+        fs::create_dir(&folder_path)?;
+        let mut file = File::create(file_path)?;
+        let mut html = String::from("");
+
+
+        // building up html like the good old days
+        html.push_str(&format!("<h1>{}</h1>\n", tag));
+        html.push_str("<ul>\n");
+        for post in p {
+            html.push_str(&post.render_link());
+        }
+        html.push_str("</ul>\n");
+
+        file.write_all(template.build_page(&config, &html, &tag).as_bytes())?;
+        println!("-> {}", tag);
+    }
+
+    println!("creating index..");
     let index_path = path.clone().join("index.html");
     let mut file = File::create(index_path)?;
     let mut html = String::from("");
 
     // building up html like the good old days
+    html.push_str("<h2>posts</h2>\n");
     html.push_str("<ul>\n");
     for post in posts {
         html.push_str(&post.render_link());
+    }
+    html.push_str("</ul>\n");
+
+    html.push_str("<h2>tags</h2>\n");
+    html.push_str("<ul>\n");
+    for (tag, _) in &tags_with_pages {
+        html.push_str(&format!("<li><a href=\"/tags/{}\">{}</a></li>\n", tag, tag));
     }
     html.push_str("</ul>\n");
 

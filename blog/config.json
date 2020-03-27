@@ -1,0 +1,7 @@
+{
+    "dest": "./dist",
+    "title": "title",
+    "selector_content": "CONTENT",
+    "selector_title": "TITLE",
+    "selector_css": "CSS"
+}

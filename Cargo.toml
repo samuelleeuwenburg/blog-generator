@@ -1,11 +1,12 @@
 [package]
-name = "blog"
-version = "0.1.0"
+name = "blog-generator"
+version = "0.0.1"
 authors = ["Samuel Leeuwenburg <samleeuwenburg@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 regex = "1"
 comrak = "0.7"
+serde = { version = "1.0.105", features = ["derive"] }
+serde_json = "1.0"
+clap = "2.33.0"

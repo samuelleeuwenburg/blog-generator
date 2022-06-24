@@ -18,7 +18,7 @@
         in
         {
           default = pkgs.rustPlatform.buildRustPackage {
-            pname = "blog_generator";
+            pname = "blog-generator";
             version = "1.0.0";
 
             src = self;

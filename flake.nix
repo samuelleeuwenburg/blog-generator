@@ -12,12 +12,11 @@
       nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; });
     in
     {
-      packages = forAllSystems (system:
+      defaultPackage = forAllSystems (system:
         let
           pkgs = nixpkgsFor.${system};
         in
-        {
-          default = pkgs.rustPlatform.buildRustPackage {
+          pkgs.rustPlatform.buildRustPackage {
             pname = "blog-generator";
             version = "1.0.0";
 
@@ -26,7 +25,7 @@
             cargoLock = {
               lockFile = ./Cargo.lock;
             };
-          };
-        });
+          });
+
     };
 }

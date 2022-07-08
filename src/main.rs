@@ -1,175 +1,20 @@
+mod config;
+mod post;
+mod template;
+
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::BufReader;
 use std::path::Path;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use regex::Regex;
-use comrak::{markdown_to_html, ComrakOptions};
-use serde::Deserialize;
-use serde_json;
 use clap::{Arg, App};
+use config::Config;
+use post::Post;
+use template::Template;
+use std::convert::TryInto;
 
-#[derive(Deserialize)]
-struct Config {
-    dest: String,
-    title: String,
-    selector_content: String,
-    selector_title: String,
-    selector_css: String,
-}
-
-fn get_config(src_dir: &str) -> Config {
-    println!("reading config..");
-
-    let default_config = Config {
-        dest: String::from("./dist"),
-        title: String::from("Blogname"),
-        selector_content: String::from("CONTENT"),
-        selector_title: String::from("TITLE"),
-        selector_css: String::from("CSS"),
-    };
-
-    open_file(&format!("{}/config.json", src_dir))
-        .map_err(|_| "no config file found")
-        .and_then(|json| serde_json::from_str(&json).map_err(|_| "config is invalid"))
-        .unwrap_or_else(|err| {
-            println!("{}, using default one..", err);
-            default_config
-        })
-}
-
-struct Template {
-    html: String,
-    css: String,
-}
-
-impl Template {
-    fn new(html: &str, css: &str) -> Template {
-        Template {
-            html: String::from(html),
-            css: String::from(css),
-        }
-    }
-
-    fn build_page(&self, config: &Config, content: &str, title: &str) -> String {
-        let html = self.html.to_owned();
-        let html = html.replace(&config.selector_content, &content);
-        let html = html.replace(&config.selector_title, &title);
-        let html = html.replace(&config.selector_css, &self.css);
-
-        html
-    }
-}
-
-#[derive(Debug)]
-struct Post {
-    slug: String,
-    title: String,
-    html: String,
-    dir: String,
-    meta: PostMeta,
-}
-
-impl Post {
-    fn new(slug: &str, html: &str, dir: &str, meta: PostMeta) -> Post {
-        let re_title = Regex::new("<h1>(.+)</h1>").unwrap();
-        let title = match re_title.captures(html) {
-            Some(capture) => {
-                String::from(capture.get(1).unwrap().as_str())
-            }
-            None => String::from(slug),
-        };
-
-        Post {
-            meta,
-            title,
-            slug: String::from(slug),
-            html: String::from(html),
-            dir: String::from(dir),
-        }
-    }
-
-    fn render_link(&self) -> String {
-        format!("<li><a href=\"/{}\">{}</a></li>\n", self.slug, self.title)
-    }
-}
-
-fn open_file(path: &str) -> std::io::Result<String> {
-    let file = File::open(path)?;
-    let mut buf_reader = BufReader::new(file);
-    let mut content = String::new();
-    buf_reader.read_to_string(&mut content)?;
-
-    Ok(content)
-}
-
-#[derive(Deserialize, Debug)]
-struct PostMeta {
-    timestamp: Option<usize>,
-    tags: Option<Vec<String>>,
-}
-
-fn get_meta(path: &str) -> PostMeta {
-    open_file(path)
-        .map_err(|_| "no meta file found")
-        .and_then(|json| serde_json::from_str(&json).map_err(|_| "meta file is invalid"))
-        .unwrap_or_else(|err| {
-            println!("{}, using default one..", err);
-            PostMeta { timestamp: None, tags: None }
-        })
-}
-
-fn get_posts(src_dir: &str) -> std::io::Result<Vec<Post>> {
-    println!("reading markdown posts..");
-    let mut options = ComrakOptions::default();
-    options.unsafe_ = true;
-
-    let files = fs::read_dir(format!("{}/posts", src_dir))?;
-    let mut posts: Vec<Post> = Vec::new();
-
-    for entry in files {
-        let dir = entry?;
-        let metadata = dir.metadata()?;
-
-        if metadata.is_dir() {
-            let mut meta_path = dir.path().clone();
-            let mut markdown_path = dir.path().clone();
-
-            meta_path.push("meta.json");
-            markdown_path.push("content.md");
-
-            let markdown = open_file(markdown_path.to_str().unwrap())?;
-            let meta = get_meta(meta_path.to_str().unwrap());
-
-            let html = markdown_to_html(&markdown, &options);
-            let slug = dir.file_name().to_str().unwrap().to_owned();
-
-            posts.push(
-                Post::new(
-                    &slug,
-                    &html,
-                    &dir.path().to_str().unwrap(),
-                    meta,
-                )
-            );
-        }
-    }
-
-    Ok(posts)
-}
-
-fn get_template(src_dir: &str) -> std::io::Result<Template> {
-    println!("reading template..");
-
-    let html = open_file(&format!("{}/template.html", src_dir))?;
-    let css = open_file(&format!("{}/style.css", src_dir))?;
-
-    Ok(Template::new(&html, &css))
-}
-
-fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> std::io::Result<()> {
+fn write_html_files(config: &Config, template: &Template, posts: &[Post]) -> std::io::Result<()> {
     let path = Path::new(&config.dest);
     match fs::create_dir(path) {
         Ok(_) => println!("creating folder.."),
@@ -185,16 +30,16 @@ fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> 
     let mut tags_with_pages: HashMap<String, Vec<&Post>> = HashMap::new();
 
     for post in posts {
-        post.meta.tags.clone().map(|tags| {
+        if let Some(tags) = post.meta.tags.clone() {
             for tag in tags {
                 match tags_with_pages.get_mut(&tag) {
                     Some(posts) => posts.push(post),
                     None => { tags_with_pages.insert(tag, vec![post]); }
                 }
             }
-        });
+        }
 
-        let folder_path = path.clone().join(&post.slug);
+        let folder_path = path.join(&post.slug);
         fs::create_dir(&folder_path)?;
 
         let file_path = folder_path.join("index.html");
@@ -213,12 +58,12 @@ fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> 
             }
         }
 
-        file.write_all(template.build_page(&config, &post.html, &post.title).as_bytes())?;
+        file.write_all(template.build_page(config, &post.html, &post.title).as_bytes())?;
         println!("-> {}", &post.slug);
     }
 
     println!("creating tag folder..");
-    let tag_path = path.clone().join("tags");
+    let tag_path = path.join("tags");
     fs::create_dir(&tag_path)?;
 
     println!("creating tag pages..");
@@ -238,12 +83,12 @@ fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> 
         }
         html.push_str("</ul>\n");
 
-        file.write_all(template.build_page(&config, &html, &tag).as_bytes())?;
+        file.write_all(template.build_page(config, &html, tag).as_bytes())?;
         println!("-> {}", tag);
     }
 
     println!("creating index..");
-    let index_path = path.clone().join("index.html");
+    let index_path = path.join("index.html");
     let mut file = File::create(index_path)?;
     let mut html = String::from("");
 
@@ -257,20 +102,20 @@ fn write_html_files(config: &Config, template: &Template, posts: &Vec<Post>) -> 
 
     html.push_str("<h2>tags</h2>\n");
     html.push_str("<ul>\n");
-    for (tag, _) in &tags_with_pages {
+    for tag in tags_with_pages.keys() {
         html.push_str(&format!("<li><a href=\"/tags/{}\">{}</a></li>\n", tag, tag));
     }
     html.push_str("</ul>\n");
 
-    file.write_all(template.build_page(&config, &html, &config.title).as_bytes())?;
+    file.write_all(template.build_page(config, &html, &config.title).as_bytes())?;
 
     println!("\ndone!");
     Ok(())
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), &'static str> {
     let matches = App::new("Blog generator")
-        .version("0.1")
+        .version("0.1.0")
         .arg(Arg::with_name("directory")
              .short("d")
              .long("directory")
@@ -278,10 +123,40 @@ fn main() -> std::io::Result<()> {
              .takes_value(true))
          .get_matches();
 
-    let src_dir = matches.value_of("directory").unwrap_or("./blog");
+    let src_dir = Path::new(matches.value_of("directory").unwrap_or("./blog"));
 
-    let config = get_config(&src_dir);
-    let mut posts = get_posts(&src_dir)?;
+    println!("reading config..");
+
+    let config: Config = File::open(src_dir.join("config.json"))
+        .map_err(|_| "no config file found")?
+        .try_into()
+        .unwrap_or_else(|err| {
+            println!("{}, using default one..", err);
+            Default::default()
+        });
+
+    println!("reading markdown posts..");
+
+    let files = fs::read_dir(src_dir.join("posts/"))
+        .map_err(|_| "unable to find `/posts` folder")?;
+
+    let mut posts: Vec<Post> = Vec::new();
+
+    for entry in files {
+        let dir = entry.map_err(|_| "cant read entry")?;
+        let metadata = dir.metadata().map_err(|_| "cant read metadata")?;
+
+        if metadata.is_dir() {
+            let post: Post = dir.path()
+                .to_str()
+                .unwrap()
+                .to_owned()
+                .try_into()
+                .map_err(|_| "cant parse folder into post")?;
+
+            posts.push(post);
+        }
+    }
 
     posts.sort_by(|a, b| {
         match (a.meta.timestamp, b.meta.timestamp) {
@@ -292,7 +167,14 @@ fn main() -> std::io::Result<()> {
         }
     });
 
-    let template = get_template(&src_dir)?;
 
-    write_html_files(&config, &template, &posts)
+    println!("reading template..");
+    let template: Template = src_dir
+        .to_str()
+        .unwrap()
+        .to_owned()
+        .try_into()
+        .map_err(|_| "cant create template")?;
+
+    write_html_files(&config, &template, &posts).map_err(|_| "unable to build html")
 }

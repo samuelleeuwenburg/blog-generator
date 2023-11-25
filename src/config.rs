@@ -26,7 +26,6 @@ pub struct Config {
     pub title: String,
     pub selector_content: String,
     pub selector_title: String,
-    pub selector_css: String,
 }
 
 impl Default for Config {
@@ -36,7 +35,6 @@ impl Default for Config {
             title: String::from("Blogname"),
             selector_content: String::from("CONTENT"),
             selector_title: String::from("TITLE"),
-            selector_css: String::from("CSS"),
         }
     }
 }

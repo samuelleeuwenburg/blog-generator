@@ -7,7 +7,6 @@ use std::path::Path;
 
 #[derive(Debug)]
 pub enum TemplateError {
-    CantReadCssFile,
     CantReadTemplateFile,
 }
 
@@ -21,19 +20,17 @@ impl Error for TemplateError {}
 
 pub struct Template {
     html: String,
-    css: String,
 }
 
 impl Template {
-    pub fn new(html: String, css: String) -> Template {
-        Template { html, css }
+    pub fn new(html: String) -> Template {
+        Template { html }
     }
 
     pub fn build_page(&self, config: &Config, content: &str, title: &str) -> String {
         let html = self.html.to_owned();
         let html = html.replace(&config.selector_content, content);
-        let html = html.replace(&config.selector_title, title);
-        html.replace(&config.selector_css, &self.css)
+        html.replace(&config.selector_title, title)
     }
 }
 
@@ -44,9 +41,7 @@ impl TryFrom<String> for Template {
         let path = Path::new(&path_string);
         let html = fs::read_to_string(path.join("template.html"))
             .map_err(|_| TemplateError::CantReadTemplateFile)?;
-        let css = fs::read_to_string(path.join("style.css"))
-            .map_err(|_| TemplateError::CantReadCssFile)?;
 
-        Ok(Template::new(html, css))
+        Ok(Template::new(html))
     }
 }

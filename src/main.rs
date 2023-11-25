@@ -8,6 +8,7 @@ use post::Post;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::error::Error;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
@@ -15,6 +16,7 @@ use std::path::Path;
 use template::Template;
 
 fn write_html_files(
+    src_path: &Path,
     config: &Config,
     template: &Template,
     posts: &[Post],
@@ -29,6 +31,20 @@ fn write_html_files(
             println!("creating folder..");
             fs::create_dir(path)?;
         }
+    }
+
+    println!("copying assets folder..");
+    let assets_src = src_path.join("assets");
+    let assets_dest = path.join("assets");
+
+    fs::create_dir(&assets_dest)?;
+    let assets = fs::read_dir(&assets_src)?;
+
+    for asset in assets {
+        let asset = asset?;
+        let file_name = asset.file_name().to_str().unwrap().to_owned();
+        let new_path = path.join("assets").clone().join(file_name);
+        fs::copy(asset.path(), new_path)?;
     }
 
     println!("creating posts..");
@@ -152,7 +168,7 @@ fn write_html_files(
     Ok(())
 }
 
-fn main() -> Result<(), &'static str> {
+fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new("Blog generator")
         .version("0.1.0")
         .arg(
@@ -236,5 +252,5 @@ fn main() -> Result<(), &'static str> {
         .try_into()
         .map_err(|_| "cant create template")?;
 
-    write_html_files(&config, &template, &posts, &static_pages).map_err(|_| "unable to build html")
+    write_html_files(&src_dir, &config, &template, &posts, &static_pages).map_err(|e| e.into())
 }

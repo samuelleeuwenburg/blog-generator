@@ -1,10 +1,10 @@
+use serde::Deserialize;
+use std::convert::TryFrom;
+use std::error::Error;
+use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::error::Error;
-use std::fmt;
-use std::convert::TryFrom;
-use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub enum ConfigError {
@@ -13,9 +13,9 @@ pub enum ConfigError {
 }
 
 impl fmt::Display for ConfigError {
-   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-       write!(f, "{:?}", self)
-   }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Error for ConfigError {}
@@ -47,9 +47,10 @@ impl TryFrom<File> for Config {
     fn try_from(file: File) -> Result<Config, Self::Error> {
         let mut buf_reader = BufReader::new(file);
         let mut content = String::new();
-        buf_reader.read_to_string(&mut content).map_err(|_| ConfigError::CantReadFile)?;
+        buf_reader
+            .read_to_string(&mut content)
+            .map_err(|_| ConfigError::CantReadFile)?;
 
         serde_json::from_str(&content).map_err(|_| ConfigError::InvalidConfig)?
     }
 }
-

@@ -1,9 +1,9 @@
-use std::fs;
-use std::path::Path;
+use crate::config::Config;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
-use std::convert::TryFrom;
-use crate::config::Config;
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug)]
 pub enum TemplateError {
@@ -12,9 +12,9 @@ pub enum TemplateError {
 }
 
 impl fmt::Display for TemplateError {
-   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-       write!(f, "{:?}", self)
-   }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Error for TemplateError {}
@@ -42,8 +42,10 @@ impl TryFrom<String> for Template {
 
     fn try_from(path_string: String) -> Result<Template, TemplateError> {
         let path = Path::new(&path_string);
-        let html = fs::read_to_string(path.join("template.html")).map_err(|_| TemplateError::CantReadTemplateFile)?;
-        let css = fs::read_to_string(path.join("style.css")).map_err(|_| TemplateError::CantReadCssFile)?;
+        let html = fs::read_to_string(path.join("template.html"))
+            .map_err(|_| TemplateError::CantReadTemplateFile)?;
+        let css = fs::read_to_string(path.join("style.css"))
+            .map_err(|_| TemplateError::CantReadCssFile)?;
 
         Ok(Template::new(html, css))
     }

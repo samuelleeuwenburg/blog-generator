@@ -1,7 +1,8 @@
 {
     "dest": "./public",
     "title": "title",
+    "description": "this blog is about stuff!",
     "selector_content": "CONTENT",
     "selector_title": "TITLE",
-    "selector_css": "CSS"
+    "selector_description": "DESCRIPTION"
 }

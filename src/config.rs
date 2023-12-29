@@ -24,8 +24,10 @@ impl Error for ConfigError {}
 pub struct Config {
     pub dest: String,
     pub title: String,
+    pub description: String,
     pub selector_content: String,
     pub selector_title: String,
+    pub selector_description: String,
 }
 
 impl Default for Config {
@@ -33,8 +35,10 @@ impl Default for Config {
         Config {
             dest: String::from("./public"),
             title: String::from("Blogname"),
+            description: String::from("Blogname"),
             selector_content: String::from("CONTENT"),
             selector_title: String::from("TITLE"),
+            selector_description: String::from("DESCRIPTION"),
         }
     }
 }
@@ -49,6 +53,6 @@ impl TryFrom<File> for Config {
             .read_to_string(&mut content)
             .map_err(|_| ConfigError::CantReadFile)?;
 
-        serde_json::from_str(&content).map_err(|_| ConfigError::InvalidConfig)?
+        serde_json::from_str(&content).map_err(|_| ConfigError::InvalidConfig)
     }
 }

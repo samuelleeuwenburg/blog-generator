@@ -27,9 +27,22 @@ impl Template {
         Template { html }
     }
 
-    pub fn build_page(&self, config: &Config, content: &str, title: &str) -> String {
+    pub fn build_page(
+        &self,
+        config: &Config,
+        content: &str,
+        title: &str,
+        description: Option<&str>,
+    ) -> String {
         let html = self.html.to_owned();
         let html = html.replace(&config.selector_content, content);
+
+        let html = if let Some(description) = description {
+            html.replace(&config.selector_description, description)
+        } else {
+            html
+        };
+
         html.replace(&config.selector_title, title)
     }
 }

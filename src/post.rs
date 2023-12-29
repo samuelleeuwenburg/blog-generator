@@ -54,7 +54,7 @@ impl Post {
         }
     }
 
-    pub fn render_link(&self) -> String {
+    pub fn render_date(&self) -> String {
         let date = self
             .meta
             .timestamp
@@ -64,10 +64,12 @@ impl Post {
                     .to_string()
             })
             .unwrap_or("".into());
-        format!(
-            "<li><a href=\"/{}\">{} - {}</a></li>\n",
-            self.slug, date, self.title
-        )
+
+        format!("{}", date)
+    }
+
+    pub fn render_link(&self) -> String {
+        format!("<a href=\"/{}\">{}</a>", self.slug, self.title)
     }
 }
 
@@ -81,7 +83,10 @@ impl TryFrom<String> for Post {
             fs::read_to_string(path.join("content.md")).map_err(|_| PostError::CantReadFile)?;
 
         let mut options = ComrakOptions::default();
+
+        options.extension.footnotes = true;
         options.render.unsafe_ = true;
+
         let html = markdown_to_html(&markdown, &options);
 
         let dir = path.to_str().unwrap().to_owned();
@@ -105,6 +110,8 @@ impl TryFrom<String> for Post {
 pub struct PostMeta {
     pub timestamp: Option<usize>,
     pub tags: Option<Vec<String>>,
+    pub description: Option<String>,
+    pub keywords: Option<Vec<String>>,
 }
 
 impl Default for PostMeta {
@@ -112,6 +119,8 @@ impl Default for PostMeta {
         PostMeta {
             timestamp: None,
             tags: None,
+            description: None,
+            keywords: None,
         }
     }
 }

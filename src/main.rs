@@ -83,7 +83,12 @@ fn write_html_files(
 
         file.write_all(
             template
-                .build_page(config, &post.html, &post.title)
+                .build_page(
+                    config,
+                    &post.html,
+                    &post.title,
+                    post.meta.description.as_deref(),
+                )
                 .as_bytes(),
         )?;
         println!("-> {}", &post.slug);
@@ -112,7 +117,12 @@ fn write_html_files(
 
         file.write_all(
             template
-                .build_page(config, &post.html, &post.title)
+                .build_page(
+                    config,
+                    &post.html,
+                    &post.title,
+                    post.meta.description.as_deref(),
+                )
                 .as_bytes(),
         )?;
         println!("-> {}", &post.slug);
@@ -134,11 +144,16 @@ fn write_html_files(
         html.push_str(&format!("<h1>All posts tagged with {}</h1>\n", tag));
         html.push_str("<ul>\n");
         for post in p {
+            html.push_str("<li>");
+            html.push_str("<small>");
+            html.push_str(&post.render_date());
+            html.push_str("</small> ");
             html.push_str(&post.render_link());
+            html.push_str("</li>\n");
         }
         html.push_str("</ul>\n");
 
-        file.write_all(template.build_page(config, &html, tag).as_bytes())?;
+        file.write_all(template.build_page(config, &html, tag, None).as_bytes())?;
         println!("-> {}", tag);
     }
 
@@ -151,18 +166,19 @@ fn write_html_files(
     html.push_str("<h2>Posts</h2>\n");
     html.push_str("<ul class=\"posts\">\n");
     for post in posts {
+        html.push_str("<li>");
+        html.push_str("<small>");
+        html.push_str(&post.render_date());
+        html.push_str("</small> ");
         html.push_str(&post.render_link());
+        html.push_str("</li>\n");
     }
     html.push_str("</ul>\n");
-
-    // html.push_str("<h2>tags</h2>\n");
-    // html.push_str("<ul class=\"tags\">\n");
-    // for tag in tags_with_pages.keys() {
-    //     html.push_str(&format!("<li><a href=\"/tags/{}\">{}</a></li>\n", tag, tag));
-    // }
-    // html.push_str("</ul>\n");
-
-    file.write_all(template.build_page(config, &html, &config.title).as_bytes())?;
+    file.write_all(
+        template
+            .build_page(config, &html, &config.title, Some(&config.description))
+            .as_bytes(),
+    )?;
 
     println!("\ndone!");
     Ok(())

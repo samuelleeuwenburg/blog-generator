@@ -1,9 +1,12 @@
-use crate::config::Config;
+use chrono::prelude::*;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::path::Path;
+
+use crate::config::Config;
+use crate::post::PostMeta;
 
 #[derive(Debug)]
 pub enum TemplateError {
@@ -32,13 +35,35 @@ impl Template {
         config: &Config,
         content: &str,
         title: &str,
-        description: Option<&str>,
+        meta: Option<&PostMeta>,
     ) -> String {
         let html = self.html.to_owned();
         let html = html.replace(&config.selector_content, content);
 
-        let html = if let Some(description) = description {
-            html.replace(&config.selector_description, description)
+        // @TODO: prettify this mess of a flow
+        let html = if let Some(m) = meta {
+            let html = if let Some(description) = &m.description {
+                html.replace(&config.selector_description, description)
+            } else {
+                html
+            };
+
+            let html = if let Some(timestamp) = &m.timestamp {
+                let human_readable_timestamp = DateTime::from_timestamp(*timestamp as i64, 0)
+                    .expect("Bad timestamp!")
+                    .format("%Y-%m-%d")
+                    .to_string();
+
+                html.replace(&config.selector_timestamp, &human_readable_timestamp)
+            } else {
+                html
+            };
+
+            if let Some(main_image) = &m.main_image {
+                html.replace(&config.selector_main_image, main_image)
+            } else {
+                html
+            }
         } else {
             html
         };

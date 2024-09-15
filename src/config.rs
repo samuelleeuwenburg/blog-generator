@@ -28,6 +28,8 @@ pub struct Config {
     pub selector_content: String,
     pub selector_title: String,
     pub selector_description: String,
+    pub selector_main_image: String,
+    pub selector_timestamp: String,
 }
 
 impl Default for Config {
@@ -39,6 +41,8 @@ impl Default for Config {
             selector_content: String::from("CONTENT"),
             selector_title: String::from("TITLE"),
             selector_description: String::from("DESCRIPTION"),
+            selector_main_image: String::from("MAIN_IMAGE"),
+            selector_timestamp: String::from("TIMESTAMP"),
         }
     }
 }

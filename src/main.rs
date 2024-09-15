@@ -83,12 +83,7 @@ fn write_html_files(
 
         file.write_all(
             template
-                .build_page(
-                    config,
-                    &post.html,
-                    &post.title,
-                    post.meta.description.as_deref(),
-                )
+                .build_page(config, &post.html, &post.title, Some(&post.meta))
                 .as_bytes(),
         )?;
         println!("-> {}", &post.slug);
@@ -117,12 +112,7 @@ fn write_html_files(
 
         file.write_all(
             template
-                .build_page(
-                    config,
-                    &post.html,
-                    &post.title,
-                    post.meta.description.as_deref(),
-                )
+                .build_page(config, &post.html, &post.title, Some(&post.meta))
                 .as_bytes(),
         )?;
         println!("-> {}", &post.slug);
@@ -176,7 +166,7 @@ fn write_html_files(
     html.push_str("</ul>\n");
     file.write_all(
         template
-            .build_page(config, &html, &config.title, Some(&config.description))
+            .build_page(config, &html, &config.title, None)
             .as_bytes(),
     )?;
 

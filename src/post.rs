@@ -1,6 +1,5 @@
 use chrono::prelude::*;
 use comrak::{markdown_to_html, ComrakOptions};
-use regex::Regex;
 use serde::Deserialize;
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -39,9 +38,8 @@ pub struct Post {
 
 impl Post {
     pub fn new(slug: String, html: String, dir: String, meta: PostMeta) -> Post {
-        let re_title = Regex::new("<h1>(.+)</h1>").unwrap();
-        let title = match re_title.captures(&html) {
-            Some(capture) => String::from(capture.get(1).unwrap().as_str()),
+        let title = match &meta.title {
+            Some(title) => title.clone(),
             None => slug.clone(),
         };
 
@@ -59,7 +57,8 @@ impl Post {
             .meta
             .timestamp
             .map(|t| {
-                NaiveDateTime::from_timestamp(t as i64, 0)
+                DateTime::from_timestamp(t as i64, 0)
+                    .expect("Bad timestamp!")
                     .format("%Y-%m-%d")
                     .to_string()
             })
@@ -108,19 +107,23 @@ impl TryFrom<String> for Post {
 
 #[derive(Deserialize, Debug)]
 pub struct PostMeta {
+    pub title: Option<String>,
     pub timestamp: Option<usize>,
     pub tags: Option<Vec<String>>,
     pub description: Option<String>,
     pub keywords: Option<Vec<String>>,
+    pub main_image: Option<String>,
 }
 
 impl Default for PostMeta {
     fn default() -> Self {
         PostMeta {
+            title: None,
             timestamp: None,
             tags: None,
             description: None,
             keywords: None,
+            main_image: None,
         }
     }
 }

@@ -113,6 +113,7 @@ pub struct PostMeta {
     pub description: Option<String>,
     pub keywords: Option<Vec<String>>,
     pub main_image: Option<String>,
+    pub draft: Option<bool>,
 }
 
 impl Default for PostMeta {
@@ -124,6 +125,7 @@ impl Default for PostMeta {
             description: None,
             keywords: None,
             main_image: None,
+            draft: None,
         }
     }
 }

@@ -18,11 +18,15 @@ use template::Template;
 fn write_html_files(
     src_path: &Path,
     config: &Config,
-    template: &Template,
     posts: &[Post],
     static_pages: &[Post],
 ) -> std::io::Result<()> {
     let path = Path::new(&config.dest);
+
+    let template: Template = Template::new(fs::read_to_string(src_path.join("template.html"))?);
+
+    let template_index: Template = Template::new(fs::read_to_string(src_path.join("index.html"))?);
+
     match fs::create_dir(path) {
         Ok(_) => println!("creating folder.."),
         Err(_) => {
@@ -118,54 +122,24 @@ fn write_html_files(
         println!("-> {}", &post.slug);
     }
 
-    println!("creating tag folder..");
-    let tag_path = path.join("tags");
-    fs::create_dir(&tag_path)?;
-
-    println!("creating tag pages..");
-    for (tag, p) in &tags_with_pages {
-        let folder_path = tag_path.clone().join(&tag);
-        let file_path = folder_path.clone().join("index.html");
-        fs::create_dir(&folder_path)?;
-        let mut file = File::create(file_path)?;
-        let mut html = String::from("");
-
-        // building up html like the good old days
-        html.push_str(&format!("<h1>All posts tagged with {}</h1>\n", tag));
-        html.push_str("<ul>\n");
-        for post in p {
-            html.push_str("<li>");
-            html.push_str("<small>");
-            html.push_str(&post.render_date());
-            html.push_str("</small> ");
-            html.push_str(&post.render_link());
-            html.push_str("</li>\n");
-        }
-        html.push_str("</ul>\n");
-
-        file.write_all(template.build_page(config, &html, tag, None).as_bytes())?;
-        println!("-> {}", tag);
-    }
-
     println!("creating index..");
     let index_path = path.join("index.html");
     let mut file = File::create(index_path)?;
     let mut html = String::from("");
 
     // building up html like the good old days
-    html.push_str("<h2>Posts</h2>\n");
-    html.push_str("<ul class=\"posts\">\n");
+    html.push_str("<ul>\n");
     for post in posts {
         html.push_str("<li>");
-        html.push_str("<small>");
+        html.push_str("<time>");
         html.push_str(&post.render_date());
-        html.push_str("</small> ");
+        html.push_str("</time> ");
         html.push_str(&post.render_link());
         html.push_str("</li>\n");
     }
     html.push_str("</ul>\n");
     file.write_all(
-        template
+        template_index
             .build_page(config, &html, &config.title, None)
             .as_bytes(),
     )?;
@@ -220,7 +194,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .try_into()
                 .map_err(|_| "cant parse folder into post")?;
 
-            posts.push(post);
+            match post.meta.draft {
+                Some(true) => (),
+                _ => posts.push(post),
+            };
         }
     }
 
@@ -250,13 +227,5 @@ fn main() -> Result<(), Box<dyn Error>> {
         (Some(a), Some(b)) => b.cmp(&a),
     });
 
-    println!("reading template..");
-    let template: Template = src_dir
-        .to_str()
-        .unwrap()
-        .to_owned()
-        .try_into()
-        .map_err(|_| "cant create template")?;
-
-    write_html_files(&src_dir, &config, &template, &posts, &static_pages).map_err(|e| e.into())
+    write_html_files(&src_dir, &config, &posts, &static_pages).map_err(|e| e.into())
 }

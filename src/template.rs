@@ -71,15 +71,3 @@ impl Template {
         html.replace(&config.selector_title, title)
     }
 }
-
-impl TryFrom<String> for Template {
-    type Error = TemplateError;
-
-    fn try_from(path_string: String) -> Result<Template, TemplateError> {
-        let path = Path::new(&path_string);
-        let html = fs::read_to_string(path.join("template.html"))
-            .map_err(|_| TemplateError::CantReadTemplateFile)?;
-
-        Ok(Template::new(html))
-    }
-}

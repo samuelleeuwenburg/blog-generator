@@ -35,6 +35,7 @@ impl Template {
         config: &Config,
         content: &str,
         title: &str,
+        slug: &str,
         meta: Option<&PostMeta>,
     ) -> String {
         let html = self.html.to_owned();
@@ -60,7 +61,8 @@ impl Template {
             };
 
             if let Some(main_image) = &m.main_image {
-                html.replace(&config.selector_main_image, main_image)
+                let post_url = format!("{}/{}/{}", &config.base_url, slug, main_image);
+                html.replace(&config.selector_main_image, &post_url)
             } else {
                 html
             }
@@ -68,6 +70,7 @@ impl Template {
             html
         };
 
+        let html = html.replace(&config.selector_base_url, &config.base_url);
         html.replace(&config.selector_title, title)
     }
 }

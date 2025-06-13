@@ -78,7 +78,8 @@ fn write_html_files(
             let path = path?;
             let extension = path.path().extension().unwrap().to_owned();
 
-            if extension == "png" || extension == "jpg" || extension == "jpeg" {
+            if extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "mp4"
+            {
                 let file_name = path.file_name().to_str().unwrap().to_owned();
                 let new_path = folder_path.clone().join(file_name);
                 fs::copy(path.path(), new_path)?;
@@ -87,7 +88,13 @@ fn write_html_files(
 
         file.write_all(
             template
-                .build_page(config, &post.html, &post.title, Some(&post.meta))
+                .build_page(
+                    config,
+                    &post.html,
+                    &post.title,
+                    &post.slug,
+                    Some(&post.meta),
+                )
                 .as_bytes(),
         )?;
         println!("-> {}", &post.slug);
@@ -116,7 +123,13 @@ fn write_html_files(
 
         file.write_all(
             template
-                .build_page(config, &post.html, &post.title, Some(&post.meta))
+                .build_page(
+                    config,
+                    &post.html,
+                    &post.title,
+                    &post.slug,
+                    Some(&post.meta),
+                )
                 .as_bytes(),
         )?;
         println!("-> {}", &post.slug);
@@ -140,7 +153,7 @@ fn write_html_files(
     html.push_str("</ul>\n");
     file.write_all(
         template_index
-            .build_page(config, &html, &config.title, None)
+            .build_page(config, &html, &config.title, "/", None)
             .as_bytes(),
     )?;
 

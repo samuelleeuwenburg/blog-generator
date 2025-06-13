@@ -22,9 +22,11 @@ impl Error for ConfigError {}
 
 #[derive(Deserialize)]
 pub struct Config {
+    pub base_url: String,
     pub dest: String,
     pub title: String,
     pub description: String,
+    pub selector_base_url: String,
     pub selector_content: String,
     pub selector_title: String,
     pub selector_description: String,
@@ -35,9 +37,11 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
+            base_url: String::from(""),
             dest: String::from("./public"),
             title: String::from("Blogname"),
             description: String::from("Blogname"),
+            selector_base_url: String::from("BASE_URL"),
             selector_content: String::from("CONTENT"),
             selector_title: String::from("TITLE"),
             selector_description: String::from("DESCRIPTION"),

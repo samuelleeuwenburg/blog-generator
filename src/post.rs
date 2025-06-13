@@ -68,7 +68,7 @@ impl Post {
     }
 
     pub fn render_link(&self) -> String {
-        format!("<a href=\"/{}\">{}</a>", self.slug, self.title)
+        format!("<a href=\"/{}/\">{}</a>", self.slug, self.title)
     }
 }
 
